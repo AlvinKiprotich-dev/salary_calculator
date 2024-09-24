@@ -38,11 +38,13 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
   double _extraTimeRate = 1.5; // Extra time multiplier
   int _workHours = 8; // Default work hours
 
+  List<double> _dailySalaries = []; // List to store daily salaries
+
   @override
   void initState() {
     super.initState();
     _loadSettings(); // Load user settings
-    _loadSalary(); // Load saved salary on app start
+    _loadSalaries(); // Load saved salaries on app start
   }
 
   @override
@@ -99,14 +101,15 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
   // Save salary data to local storage
   Future<void> _saveSalary() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('daily_salary', _salary);
+    _dailySalaries.add(_salary); // Add the current salary to the list
+    await prefs.setStringList('daily_salaries', _dailySalaries.map((e) => e.toString()).toList());
   }
 
   // Load salary data from local storage
-  Future<void> _loadSalary() async {
+  Future<void> _loadSalaries() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      _salary = prefs.getDouble('daily_salary') ?? 0.0;
+      _dailySalaries = prefs.getStringList('daily_salaries')?.map((e) => double.parse(e)).toList() ?? [];
     });
   }
 
@@ -174,6 +177,14 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
     }
   }
 
+  // Navigate to the salary view page
+  void _navigateToSalaryView() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => SalaryViewPage(dailySalaries: _dailySalaries)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -212,6 +223,17 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
               _buildSalaryDisplay(),
               SizedBox(height: 20),
               _buildToggleButton(), // Add a toggle button to start/stop real-time updates
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _navigateToSalaryView,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text('View Daily Salaries'),
+              ),
             ],
           ),
         ),
@@ -470,6 +492,48 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Text('Select Time'),
         ),
       ],
+    );
+  }
+}
+
+// New page to view the daily salaries
+class SalaryViewPage extends StatelessWidget {
+  final List<double> dailySalaries;
+
+  const SalaryViewPage({Key? key, required this.dailySalaries}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    double totalSalary = dailySalaries.fold(0, (sum, item) => sum + item);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Daily Salaries'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: ListView.builder(
+                itemCount: dailySalaries.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text('Day ${index + 1}: ${dailySalaries[index].toStringAsFixed(2)}'),
+                  );
+                },
+              ),
+            ),
+            SizedBox(height: 20),
+            Text(
+              'Total Salary: ${totalSalary.toStringAsFixed(2)}',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
