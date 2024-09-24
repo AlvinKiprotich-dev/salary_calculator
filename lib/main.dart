@@ -14,6 +14,7 @@ class SalaryCalculatorApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
+        fontFamily: 'Roboto',
       ),
       home: SalaryCalculator(),
     );
@@ -30,7 +31,7 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
   TimeOfDay _endTime = TimeOfDay.now();
   double _salary = 0.0;
   Timer? _timer;
-  bool _isStopped = false;
+  bool _isStopped = true; // Initially stopped
   bool _isManualEndTime = false;
 
   double _salaryPerHour = 1000.0; // Default salary per hour
@@ -42,7 +43,6 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
     super.initState();
     _loadSettings(); // Load user settings
     _loadSalary(); // Load saved salary on app start
-    _startRealTimeSalaryUpdate(); // Start real-time updates
   }
 
   @override
@@ -182,30 +182,38 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
         backgroundColor: Colors.blueAccent,
         actions: [
           IconButton(
-            icon: Icon(Icons.edit),
+            icon: Icon(Icons.settings),
             onPressed: _navigateToSettings, // Navigate to settings
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            _buildTimePicker(
-              context: context,
-              label: 'Start Time',
-              time: _startTime.format(context),
-              onPressed: () => _selectStartTime(context),
-            ),
-            SizedBox(height: 20),
-            _buildEndTimePicker(), // Display real-time or manual end time selection
-            SizedBox(height: 30),
-            _buildSalaryDisplay(),
-            SizedBox(height: 20),
-            _buildStopButton(), // Add a stop button to clock out
-          ],
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/background.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              _buildTimePicker(
+                context: context,
+                label: 'Start Time',
+                time: _startTime.format(context),
+                onPressed: () => _selectStartTime(context),
+              ),
+              SizedBox(height: 20),
+              _buildEndTimePicker(), // Display real-time or manual end time selection
+              SizedBox(height: 30),
+              _buildSalaryDisplay(),
+              SizedBox(height: 20),
+              _buildToggleButton(), // Add a toggle button to start/stop real-time updates
+            ],
+          ),
         ),
       ),
     );
@@ -283,16 +291,27 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
     );
   }
 
-  Widget _buildStopButton() {
+  Widget _buildToggleButton() {
     return ElevatedButton(
-      onPressed: _stopRealTimeUpdates,
+      onPressed: () {
+        if (_isStopped) {
+          // Start real-time updates
+          setState(() {
+            _isStopped = false;
+            _startRealTimeSalaryUpdate();
+          });
+        } else {
+          // Stop real-time updates
+          _stopRealTimeUpdates();
+        }
+      },
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.redAccent,
+        backgroundColor: _isStopped ? Colors.green : Colors.redAccent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      child: Text('Stop & Clock Out', style: TextStyle(fontSize: 18)),
+      child: Text(_isStopped ? 'Start' : 'Stop'),
     );
   }
 }
