@@ -117,6 +117,9 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
       _salaryPerHour = prefs.getDouble('salary_per_hour') ?? 1000.0;
       _extraTimeRate = prefs.getDouble('extra_time_rate') ?? 1.5;
       _workHours = prefs.getInt('work_hours') ?? 8;
+      int startHour = prefs.getInt('start_hour') ?? 7;
+      int startMinute = prefs.getInt('start_minute') ?? 0;
+      _startTime = TimeOfDay(hour: startHour, minute: startMinute);
     });
   }
 
@@ -126,6 +129,8 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
     await prefs.setDouble('salary_per_hour', _salaryPerHour);
     await prefs.setDouble('extra_time_rate', _extraTimeRate);
     await prefs.setInt('work_hours', _workHours);
+    await prefs.setInt('start_hour', _startTime.hour);
+    await prefs.setInt('start_minute', _startTime.minute);
   }
 
   // Start a timer to update the salary and end time every second
@@ -155,6 +160,7 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
         salaryPerHour: _salaryPerHour,
         workHours: _workHours,
         extraTimeRate: _extraTimeRate,
+        startTime: _startTime,
       )),
     );
     if (result != null) {
@@ -162,6 +168,7 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
         _salaryPerHour = result['salaryPerHour'];
         _workHours = result['workHours'];
         _extraTimeRate = result['extraTimeRate'];
+        _startTime = result['startTime'];
         _saveSettings(); // Save settings after editing
       });
     }
@@ -175,7 +182,7 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
         backgroundColor: Colors.blueAccent,
         actions: [
           IconButton(
-            icon: Icon(Icons.settings),
+            icon: Icon(Icons.edit),
             onPressed: _navigateToSettings, // Navigate to settings
           ),
         ],
@@ -269,7 +276,7 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
       ),
       child: Center(
         child: Text(
-          'Total Salary: $_salary',
+          'Current Salary: ${_salary.toStringAsFixed(2)}',
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
       ),
@@ -285,25 +292,24 @@ class _SalaryCalculatorState extends State<SalaryCalculator> {
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      child: Text(
-        'Stop & Clock Out',
-        style: TextStyle(fontSize: 18),
-      ),
+      child: Text('Stop & Clock Out', style: TextStyle(fontSize: 18)),
     );
   }
 }
 
-// Settings page where users can adjust their preferences
+// Settings page where users can adjust their preferences including start time
 class SettingsPage extends StatefulWidget {
   final double salaryPerHour;
   final int workHours;
   final double extraTimeRate;
+  final TimeOfDay startTime;
 
   const SettingsPage({
     Key? key,
     required this.salaryPerHour,
     required this.workHours,
     required this.extraTimeRate,
+    required this.startTime,
   }) : super(key: key);
 
   @override
@@ -314,6 +320,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late double _salaryPerHour;
   late int _workHours;
   late double _extraTimeRate;
+  late TimeOfDay _startTime;
 
   @override
   void initState() {
@@ -321,6 +328,19 @@ class _SettingsPageState extends State<SettingsPage> {
     _salaryPerHour = widget.salaryPerHour;
     _workHours = widget.workHours;
     _extraTimeRate = widget.extraTimeRate;
+    _startTime = widget.startTime;
+  }
+
+  Future<void> _selectStartTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _startTime,
+    );
+    if (picked != null) {
+      setState(() {
+        _startTime = picked;
+      });
+    }
   }
 
   @override
@@ -351,6 +371,12 @@ class _SettingsPageState extends State<SettingsPage> {
               value: _extraTimeRate.toString(),
               onChanged: (value) => _extraTimeRate = double.tryParse(value) ?? _extraTimeRate,
             ),
+            SizedBox(height: 20),
+            _buildTimePicker(
+              label: 'Start Time',
+              time: _startTime.format(context),
+              onPressed: () => _selectStartTime(context),
+            ),
             SizedBox(height: 30),
             ElevatedButton(
               onPressed: () {
@@ -358,6 +384,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   'salaryPerHour': _salaryPerHour,
                   'workHours': _workHours,
                   'extraTimeRate': _extraTimeRate,
+                  'startTime': _startTime,
                 });
               },
               style: ElevatedButton.styleFrom(
@@ -396,6 +423,32 @@ class _SettingsPageState extends State<SettingsPage> {
               hintText: value,
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTimePicker({
+    required String label,
+    required String time,
+    required VoidCallback onPressed,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          '$label: $time',
+          style: TextStyle(fontSize: 18),
+        ),
+        ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blueAccent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text('Select Time'),
         ),
       ],
     );
